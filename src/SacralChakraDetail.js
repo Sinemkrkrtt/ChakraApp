@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { 
   View, 
   Text, 
@@ -9,11 +9,13 @@ import {
   StatusBar,
   Dimensions
 } from 'react-native';
-import Svg, { Circle, G, Line, Defs, LinearGradient, Stop, Path, ClipPath, Rect } from 'react-native-svg';
+import Svg, { Circle, G, Line, Defs, LinearGradient, Stop, Path, ClipPath } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
+import { ChakraContext } from './ChakraContext';
 
 const { width } = Dimensions.get('window');
 
-// SAKRAL ÇAKRA TURUNCU RENK PALETİ (Premium Tonlar)
+// SAKRAL ÇAKRA TURUNCU RENK PALETİ
 const COLORS = {
   bgDark: '#0D0D11',       
   surface: '#16161B',      
@@ -82,12 +84,31 @@ const RingMetricCard = ({ label, value, subLabel, progress, type }) => {
 
 // --- ANA BİLEŞEN ---
 export default function SacralChakraDetail() {
-  const [currentWater, setCurrentWater] = useState(1250); 
+  const navigation = useNavigation();
+  
+  // GLOBAL BAĞLANTI (Ana ekranla senkronizasyon için)
+  const { chakras, updateChakraProgress } = useContext(ChakraContext);
   const goal = 2000; 
+
+  // Başlangıç değerini statik "1250" yerine Global Hafızadan (Context) çekiyoruz.
+  // Böylece sayfadan çıkıp tekrar girersen içtiğin sular kaybolmaz.
+  const [currentWater, setCurrentWater] = useState(() => {
+    const sacral = chakras.find(c => c.id === 2);
+    return sacral ? (sacral.progress / 100) * goal : 0;
+  });
+
   const progress = Math.min(currentWater / goal, 1);
 
   const addWater = (amount) => {
-    setCurrentWater(prev => Math.min(prev + amount, goal + 1000)); 
+    setCurrentWater(prev => {
+      const newWater = Math.min(prev + amount, goal + 1000); // 3000ml'ye kadar aşmaya izin ver
+      
+      // Global Sakral Çakra (ID: 2) yüzdesini maksimum %100 olacak şekilde anında güncelle
+      const newProgress = Math.min(Math.floor((newWater / goal) * 100), 100);
+      updateChakraProgress(2, newProgress); 
+      
+      return newWater;
+    });
   };
 
   // İçi Dolan Küre (Liquid Fill) Hesaplamaları
@@ -105,13 +126,24 @@ export default function SacralChakraDetail() {
       
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         
+        {/* HEADER (Çıkış Oku) */}
         <View style={styles.header}>
-                          <View style={styles.textGlowContainer}>
-                            <Text style={[styles.headerTitle, styles.textGlow]}>SAKRAL ÇAKRA</Text>
-                            <Text style={styles.headerTitle}>SAKRAL ÇAKRA</Text>
-                          </View>
-                          <View style={styles.headerGlowLine} />
-                        </View>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLORS.textGray} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M19 12H5M12 19l-7-7 7-7" />
+            </Svg>
+          </TouchableOpacity>
+
+          <View style={styles.textGlowContainer}>
+            <Text style={[styles.headerTitle, styles.textGlow]}>SAKRAL ÇAKRA</Text>
+            <Text style={styles.headerTitle}>SAKRAL ÇAKRA</Text>
+          </View>
+          <View style={styles.headerGlowLine} />
+        </View>
 
         {/* --- HERO SECTION: İÇİ DOLAN SU KÜRESİ --- */}
         <View style={styles.hero}>
@@ -239,206 +271,37 @@ export default function SacralChakraDetail() {
 
 // --- STİLLER ---
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.bgDark 
-  },
-  scroll: { 
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 60,
-  },
-    header: { alignItems: 'center', marginTop: 15, marginBottom: 30 },
+  container: { flex: 1, backgroundColor: COLORS.bgDark },
+  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 60 },
+  header: { alignItems: 'center', marginTop: 15, marginBottom: 30 },
+  backButton: { position: 'absolute', left: 0, width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: COLORS.surfaceBorder, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   textGlowContainer: { alignItems: 'center' },
   headerTitle: { color: COLORS.textWhite, fontSize: 14, fontWeight: '600', letterSpacing: 6 },
   textGlow: { position: 'absolute', color: COLORS.primaryOrange, opacity: 0.6, textShadowColor: COLORS.primaryOrange, textShadowRadius: 15 },
   headerGlowLine: { marginTop: 12, width: 80, height: 2, backgroundColor: COLORS.primaryOrange },
-  
-  hero: { 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginVertical: 10,
-    height: 330, 
-  },
-  innerRingText: { 
-    position: 'absolute', 
-    alignItems: 'center',
-    top: '32%',
-  },
-  stepLabelTop: {
-    color: COLORS.textWhite,
-    fontSize: 11,
-    letterSpacing: 2,
-    marginBottom: 4,
-    fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: {width: 0, height: 1},
-    textShadowRadius: 4,
-  },
-  stepCount: { 
-    color: COLORS.textWhite, 
-    fontSize: 56, 
-    fontWeight: '700', 
-    fontVariant: ['tabular-nums'],
-    textShadowColor: 'rgba(0, 0, 0, 0.9)',
-    textShadowOffset: {width: 0, height: 2},
-    textShadowRadius: 10,
-  },
-  stepLabelBottom: { 
-    color: COLORS.textWhite, 
-    fontSize: 10, 
-    letterSpacing: 1.5, 
-    marginTop: 4,
-    fontWeight: '700',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: {width: 0, height: 1},
-    textShadowRadius: 4,
-  },
-  stepPercentage: {
-    color: COLORS.glowOrange,
-    fontSize: 14,
-    fontWeight: '800',
-    marginTop: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.9)',
-    textShadowOffset: {width: 0, height: 1},
-    textShadowRadius: 4,
-  },
-
-  sectionTitle: {
-    color: COLORS.textDarkGray,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginBottom: 12,
-    marginTop: 15,
-  },
-
-  playerCard: { 
-    backgroundColor: COLORS.surface, 
-    paddingTop: 18,
-    paddingBottom: 20, 
-    paddingHorizontal: 20,
-    borderRadius: 24, 
-    borderWidth: 1, 
-    borderColor: COLORS.surfaceBorder,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  playerSubTitle: {
-    color: COLORS.textGray,
-    fontSize: 9,
-    letterSpacing: 1.5,
-    marginBottom: 6,
-    fontWeight: '600',
-  },
-  playTitle: { 
-    color: COLORS.textWhite, 
-    fontSize: 16, 
-    fontWeight: '600',
-    marginBottom: 15,
-  },
-  waveContainer: {
-    width: '100%',
-    height: 60,
-    marginBottom: 20,
-  },
-  playerControls: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    width: '90%',
-  },
-  iconBtnSide: {
-    alignItems: 'center',
-    width: 60,
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.bgDark,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  iconBtnLabel: {
-    color: COLORS.textGray,
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  iconBtnMain: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 80,
-  },
-  playBtnInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.glowOrange,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: COLORS.primaryOrange,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
-    marginBottom: 8,
-  },
-  iconBtnMainLabel: {
-    color: COLORS.glowOrange,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  metricsRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 20,
-  },
-  metricCard: { 
-    width: (width - 55) / 3, 
-    aspectRatio: 0.85, 
-    backgroundColor: COLORS.surface, 
-    borderRadius: 18, 
-    borderWidth: 1, 
-    borderColor: COLORS.surfaceBorder,
-    padding: 10,
-    alignItems: 'center',
-  },
-  cardHeader: {
-    color: COLORS.textWhite,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    opacity: 0.9,
-  },
-  gaugeCenter: {
-    height: 56,
-    width: 56,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 10,
-    position: 'relative',
-  },
-  gaugeIconWrapper: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  metricValue: {
-    color: COLORS.textWhite,
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  cardFooter: {
-    color: COLORS.textGray,
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 1.5,
-  },
+  hero: { alignItems: 'center', justifyContent: 'center', marginVertical: 10, height: 330 },
+  innerRingText: { position: 'absolute', alignItems: 'center', top: '32%' },
+  stepLabelTop: { color: COLORS.textWhite, fontSize: 11, letterSpacing: 2, marginBottom: 4, fontWeight: '600', textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: {width: 0, height: 1}, textShadowRadius: 4 },
+  stepCount: { color: COLORS.textWhite, fontSize: 56, fontWeight: '700', fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0, 0, 0, 0.9)', textShadowOffset: {width: 0, height: 2}, textShadowRadius: 10 },
+  stepLabelBottom: { color: COLORS.textWhite, fontSize: 10, letterSpacing: 1.5, marginTop: 4, fontWeight: '700', textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: {width: 0, height: 1}, textShadowRadius: 4 },
+  stepPercentage: { color: COLORS.glowOrange, fontSize: 14, fontWeight: '800', marginTop: 6, textShadowColor: 'rgba(0, 0, 0, 0.9)', textShadowOffset: {width: 0, height: 1}, textShadowRadius: 4 },
+  sectionTitle: { color: COLORS.textDarkGray, fontSize: 10, fontWeight: '800', letterSpacing: 2, textAlign: 'center', marginBottom: 12, marginTop: 15 },
+  playerCard: { backgroundColor: COLORS.surface, paddingTop: 18, paddingBottom: 20, paddingHorizontal: 20, borderRadius: 24, borderWidth: 1, borderColor: COLORS.surfaceBorder, alignItems: 'center', marginBottom: 20 },
+  playerSubTitle: { color: COLORS.textGray, fontSize: 9, letterSpacing: 1.5, marginBottom: 6, fontWeight: '600' },
+  playTitle: { color: COLORS.textWhite, fontSize: 16, fontWeight: '600', marginBottom: 15 },
+  waveContainer: { width: '100%', height: 60, marginBottom: 20 },
+  playerControls: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', width: '90%' },
+  iconBtnSide: { alignItems: 'center', width: 60 },
+  iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.bgDark, borderWidth: 1, borderColor: COLORS.surfaceBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  iconBtnLabel: { color: COLORS.textGray, fontSize: 10, fontWeight: '600' },
+  iconBtnMain: { alignItems: 'center', justifyContent: 'center', width: 80 },
+  playBtnInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.glowOrange, justifyContent: 'center', alignItems: 'center', shadowColor: COLORS.primaryOrange, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 8, marginBottom: 8 },
+  iconBtnMainLabel: { color: COLORS.glowOrange, fontSize: 11, fontWeight: '800' },
+  metricsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  metricCard: { width: (width - 55) / 3, aspectRatio: 0.85, backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.surfaceBorder, padding: 10, alignItems: 'center' },
+  cardHeader: { color: COLORS.textWhite, fontSize: 10, fontWeight: '700', letterSpacing: 1, opacity: 0.9 },
+  gaugeCenter: { height: 56, width: 56, justifyContent: 'center', alignItems: 'center', marginVertical: 10, position: 'relative' },
+  gaugeIconWrapper: { position: 'absolute', justifyContent: 'center', alignItems: 'center' },
+  metricValue: { color: COLORS.textWhite, fontSize: 15, fontWeight: '800', marginBottom: 2 },
+  cardFooter: { color: COLORS.textGray, fontSize: 9, fontWeight: '600', letterSpacing: 1.5 }
 });

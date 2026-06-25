@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { 
   View, 
   Text, 
@@ -12,10 +12,12 @@ import {
   Easing
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
+import { ChakraContext } from './ChakraContext';
 
 const { width } = Dimensions.get('window');
 
-// KALP ÇAKRASI YEŞİL RENK PALETİ (Huzur, Şifa ve Zen)
+// KALP ÇAKRASI YEŞİL RENK PALETİ
 const COLORS = {
   bgDark: '#050D09',       
   surface: '#0A1710',      
@@ -28,7 +30,7 @@ const COLORS = {
   textDarkGray: '#4B6355',
 };
 
-// --- YARDIMCI BİLEŞEN: Senior Seviye 3'lü Metrik Kartı ---
+// --- YARDIMCI BİLEŞEN ---
 const ZenMetricCard = ({ label, value, unit, icon }) => (
   <View style={styles.metricCard}>
     <View style={styles.metricIconBox}>
@@ -43,65 +45,92 @@ const ZenMetricCard = ({ label, value, unit, icon }) => (
 
 // --- ANA BİLEŞEN ---
 export default function HeartChakraDetail() {
+  const navigation = useNavigation();
+  const { chakras, updateChakraProgress } = useContext(ChakraContext);
+
+  // GÜNLÜK HEDEF: Tam 5 Dakika (300 Saniye)
+  const GOAL_SECONDS = 300; 
+
+  const [totalSeconds, setTotalSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
-  const [phase, setPhase] = useState('idle'); 
-  const [timeLeft, setTimeLeft] = useState(0);
   const [cycles, setCycles] = useState(0);
+
+  // 🧠 SENIOR DOKUNUŞ: Evre ve Süreyi Tek Obje (Motor) Haline Getirdik
+  const [breathState, setBreathState] = useState({ phase: 'idle', timeLeft: 0 });
 
   // Animasyon Değerleri
   const breathAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0.3)).current;
 
-  // 4-7-8 Nefes Döngüsü Mantığı
+  // 1. İLK YÜKLEMEDE GEÇMİŞ VERİYİ ÇEK
+  useEffect(() => {
+    const heart = chakras.find(c => c.id === 4);
+    if (heart) {
+      setTotalSeconds((heart.progress / 100) * GOAL_SECONDS);
+    }
+  }, []); // Sadece ilk girişte çalışır
+
+  // 2. ANA ZAMANLAYICI VE NEFES MOTORU
   useEffect(() => {
     let timer;
     if (isActive) {
-      if (timeLeft > 0) {
-        timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-      } else {
-        if (phase === 'idle' || phase === 'exhale') {
-          if (phase === 'exhale') setCycles(c => c + 1); 
-          setPhase('inhale');
-          setTimeLeft(4);
-        } else if (phase === 'inhale') {
-          setPhase('hold');
-          setTimeLeft(7);
-        } else if (phase === 'hold') {
-          setPhase('exhale');
-          setTimeLeft(8);
-        }
-      }
-    } else {
-      setPhase('idle');
-      setTimeLeft(0);
+      // Egzersiz ilk başladığında hemen "Nefes Al" moduna geç
+      setBreathState(prev => prev.phase === 'idle' ? { phase: 'inhale', timeLeft: 4 } : prev);
+
+      timer = setInterval(() => {
+        // A) TOPLAM SÜRE VE HOME SCREEN GÜNCELLEMESİ (Sen durdurana kadar devam eder)
+        setTotalSeconds(prevTotal => {
+          const newTotal = prevTotal + 1;
+          // %100'ü geçmesini engelliyoruz (5 dk dolduğunda %100'de kalır)
+          const progress = Math.min(Math.floor((newTotal / GOAL_SECONDS) * 100), 100);
+          updateChakraProgress(4, progress); // Kalp Çakrası ID: 4
+          return newTotal;
+        });
+
+        // B) NEFES EVRELERİ (4-7-8) DÖNGÜSÜ
+        setBreathState(prev => {
+          if (prev.timeLeft > 1) {
+            return { ...prev, timeLeft: prev.timeLeft - 1 };
+          }
+          
+          // Süre 0'a ulaştığında diğer evreye geçiş yap
+          if (prev.phase === 'inhale') return { phase: 'hold', timeLeft: 7 };
+          if (prev.phase === 'hold') return { phase: 'exhale', timeLeft: 8 };
+          if (prev.phase === 'exhale') {
+            setCycles(c => c + 1); // Döngü bitti, sayacı artır
+            return { phase: 'inhale', timeLeft: 4 }; // Tekrar nefes al
+          }
+          return { phase: 'inhale', timeLeft: 4 }; // Güvenlik kalkanı
+        });
+
+      }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isActive, timeLeft, phase]);
+  }, [isActive, updateChakraProgress]); 
 
-  // Nefes Animasyonları (Yumuşatılmış Easing ve Optimize Edilmiş Scale ile)
+  // 3. ANİMASYONLARI EVRELERE GÖRE TETİKLE
   useEffect(() => {
-    if (phase === 'inhale') {
-      // Çember büyüdüğü için scale oranını 1.4'te tuttuk ki ekrandan taşmasın
+    if (breathState.phase === 'inhale') {
       Animated.parallel([
         Animated.timing(breathAnim, { toValue: 1.4, duration: 4000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
         Animated.timing(opacityAnim, { toValue: 0.8, duration: 4000, useNativeDriver: true })
       ]).start();
-    } else if (phase === 'exhale') {
+    } else if (breathState.phase === 'exhale') {
       Animated.parallel([
         Animated.timing(breathAnim, { toValue: 1, duration: 8000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         Animated.timing(opacityAnim, { toValue: 0.2, duration: 8000, useNativeDriver: true })
       ]).start();
-    } else if (phase === 'idle') {
+    } else if (breathState.phase === 'idle') {
       Animated.parallel([
         Animated.timing(breathAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
         Animated.timing(opacityAnim, { toValue: 0.2, duration: 1000, useNativeDriver: true })
       ]).start();
     }
-  }, [phase]);
+  }, [breathState.phase]);
 
-  // Duruma Göre Metin ve Renk Belirleme
+  // UI İÇİN EVRE DETAYLARI
   const getPhaseDetails = () => {
-    switch(phase) {
+    switch(breathState.phase) {
       case 'inhale': return { text: 'NEFES AL', subText: 'Burnundan derin ve yavaş', color: COLORS.glowGreen };
       case 'hold': return { text: 'TUT', subText: 'İçindeki enerjiyi hisset', color: COLORS.textWhite };
       case 'exhale': return { text: 'NEFES VER', subText: 'Ağzından tamamen boşalt', color: COLORS.primaryGreen };
@@ -111,8 +140,8 @@ export default function HeartChakraDetail() {
 
   const currentPhase = getPhaseDetails();
   
-  // Toplam süreyi dakika olarak hesapla
-  const totalMinutes = Math.floor((cycles * 19) / 60);
+  // Toplam süreyi hesapla (Dakika ve Saniye olarak gösterebiliriz ama dakika tutalım)
+  const totalMinutes = Math.floor(totalSeconds / 60);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -120,29 +149,38 @@ export default function HeartChakraDetail() {
       
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         
-         <View style={styles.header}>
-                                 <View style={styles.textGlowContainer}>
-                                   <Text style={[styles.headerTitle, styles.textGlow]}>SAKRAL ÇAKRA</Text>
-                                   <Text style={styles.headerTitle}>SAKRAL ÇAKRA</Text>
-                                 </View>
-                                 <View style={styles.headerGlowLine} />
-                               </View>
-        
+        {/* HEADER */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()} 
+            activeOpacity={0.7}
+          >
+            <Svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLORS.textGray} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M19 12H5M12 19l-7-7 7-7" />
+            </Svg>
+          </TouchableOpacity>
 
-        {/* --- HERO SECTION: ORGANİK NEFES AURASI --- */}
+          <View style={styles.textGlowContainer}>
+            <Text style={[styles.headerTitle, styles.textGlow]}>KALP ÇAKRASI</Text>
+            <Text style={styles.headerTitle}>KALP ÇAKRASI</Text>
+          </View>
+          <View style={styles.headerGlowLine} />
+        </View>
+        
+        {/* HERO SECTION: ORGANİK NEFES AURASI */}
         <View style={styles.heroBreathing}>
           
           <Animated.View style={[styles.breathingOrb, { transform: [{ scale: breathAnim }], opacity: opacityAnim }]} />
           <Animated.View style={[styles.breathingOrbCore, { transform: [{ scale: breathAnim }] }]} />
 
-          {/* İçerik: Egzersiz Komutları */}
           <View style={styles.breathContent}>
             <Text style={[styles.phaseText, { color: currentPhase.color }]}>
               {currentPhase.text}
             </Text>
             
             <Text style={[styles.timerText, !isActive && { fontSize: 72, marginTop: -5 }]}>
-              {isActive ? timeLeft : '∞'}
+              {isActive ? breathState.timeLeft : '∞'}
             </Text>
             
             <Text style={styles.phaseSubText}>
@@ -152,7 +190,7 @@ export default function HeartChakraDetail() {
 
         </View>
 
-        {/* --- KONTROL BUTONU --- */}
+        {/* KONTROL BUTONU */}
         <View style={styles.controlCenter}>
           <TouchableOpacity 
             onPress={() => setIsActive(!isActive)} 
@@ -165,7 +203,7 @@ export default function HeartChakraDetail() {
           </TouchableOpacity>
         </View>
 
-        {/* --- 3'LÜ METRİK KARTLARI --- */}
+        {/* 3'LÜ METRİK KARTLARI */}
         <Text style={styles.sectionTitle}>EGZERSİZ DURUMU</Text>
         
         <View style={styles.metricsContainer}>
@@ -211,47 +249,24 @@ export default function HeartChakraDetail() {
   );
 }
 
-// --- STİLLER ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgDark },
   scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 60 },
-   header: { alignItems: 'center', marginTop: 15, marginBottom: 30 },
+  header: { alignItems: 'center', marginTop: 15, marginBottom: 30, position: 'relative', justifyContent: 'center', width: '100%' },
+  backButton: { position: 'absolute', left: 0, width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: COLORS.surfaceBorder, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   textGlowContainer: { alignItems: 'center' },
   headerTitle: { color: COLORS.textWhite, fontSize: 14, fontWeight: '600', letterSpacing: 6 },
   textGlow: { position: 'absolute', color: COLORS.primaryGreen, opacity: 0.6, textShadowColor: COLORS.primaryGreen, textShadowRadius: 15 },
   headerGlowLine: { marginTop: 12, width: 80, height: 2, backgroundColor: COLORS.primaryGreen },
 
-  // ORGANİK NEFES AURASI (Ferahlatılmış Boyutlar)
   heroBreathing: { alignItems: 'center', justifyContent: 'center', height: 350, position: 'relative' },
-  
-  breathingOrb: {
-    position: 'absolute',
-    width: 260, // Ferah dış aura
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: COLORS.glowGreen,
-    shadowColor: COLORS.glowGreen,
-    shadowOpacity: 1,
-    shadowRadius: 40,
-    elevation: 20,
-  },
-  breathingOrbCore: {
-    position: 'absolute',
-    width: 240, // Ferah iç çerçeve
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: COLORS.bgDark, 
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryGreen,
-    opacity: 0.6,
-  },
-
+  breathingOrb: { position: 'absolute', width: 260, height: 260, borderRadius: 130, backgroundColor: COLORS.glowGreen, shadowColor: COLORS.glowGreen, shadowOpacity: 1, shadowRadius: 40, elevation: 20 },
+  breathingOrbCore: { position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: COLORS.bgDark, borderWidth: 1.5, borderColor: COLORS.primaryGreen, opacity: 0.6 },
   breathContent: { alignItems: 'center', justifyContent: 'center', zIndex: 10, width: 200 },
   phaseText: { fontSize: 12, fontWeight: '800', letterSpacing: 5, marginBottom: 5, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: {width: 0, height: 2}, textShadowRadius: 4 },
   timerText: { color: COLORS.textWhite, fontSize: 86, fontWeight: '200', fontVariant: ['tabular-nums'], textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: {width: 0, height: 2}, textShadowRadius: 8, includeFontPadding: false },
   phaseSubText: { color: COLORS.textGray, fontSize: 11, fontWeight: '500', marginTop: 5, letterSpacing: 1, textAlign: 'center', paddingHorizontal: 10 },
 
-  // KONTROL BUTONU
   controlCenter: { alignItems: 'center', marginVertical: 30 },
   mainBtn: { width: '85%', paddingVertical: 18, borderRadius: 100, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   btnIdle: { backgroundColor: 'rgba(46, 204, 113, 0.08)', borderColor: 'rgba(46, 204, 113, 0.3)' },
@@ -259,8 +274,6 @@ const styles = StyleSheet.create({
   mainBtnText: { color: COLORS.primaryGreen, fontSize: 13, fontWeight: '800', letterSpacing: 3 },
 
   sectionTitle: { color: COLORS.textDarkGray, fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: 15, textAlign: 'center' },
-
-  // METRİK KARTLARI
   metricsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   metricCard: { width: (width - 60) / 3, backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.surfaceBorder, paddingVertical: 20, alignItems: 'center' },
   metricIconBox: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.bgDark, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1, borderColor: COLORS.surfaceBorder },

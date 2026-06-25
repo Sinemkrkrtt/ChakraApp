@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { 
   View, 
   Text, 
@@ -10,6 +10,8 @@ import {
   Dimensions
 } from 'react-native';
 import Svg, { Circle, G, Line, Defs, LinearGradient, Stop, Path } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
+import { ChakraContext } from './ChakraContext';
 
 const { width } = Dimensions.get('window');
 
@@ -18,9 +20,9 @@ const COLORS = {
   bgDark: '#0A0A08',       
   surface: '#141410',      
   surfaceBorder: '#2A281E',
-  primaryYellow: '#F1C40F', // Canlı Solar Plexus Sarısı
-  glowYellow: '#F39C12',    // Altın/Turuncu parlamalar
-  darkYellow: '#4A3F14',    // Derin gölge sarısı
+  primaryYellow: '#F1C40F', 
+  glowYellow: '#F39C12',    
+  darkYellow: '#4A3F14',    
   textWhite: '#F4F4F5',    
   textGray: '#8A8A83',     
   textDarkGray: '#55554C',
@@ -82,12 +84,31 @@ const RingMetricCard = ({ label, value, subLabel, progress, type }) => {
 
 // --- ANA BİLEŞEN ---
 export default function SolarPlexusDetail() {
-  const [currentMins, setCurrentMins] = useState(18); // Mevcut antrenman dakikası
+  const navigation = useNavigation();
+  
+  // GLOBAL BAĞLANTI (Ana ekranla senkronizasyon için)
+  const { chakras, updateChakraProgress } = useContext(ChakraContext);
   const goal = 30; // 30 Dakika Hedef
+
+  // Başlangıç değerini statik bir rakam yerine Global Hafızadan çekiyoruz
+  const [currentMins, setCurrentMins] = useState(() => {
+    const solar = chakras.find(c => c.id === 3);
+    return solar ? (solar.progress / 100) * goal : 0;
+  });
+
   const progress = Math.min(currentMins / goal, 1);
 
+  // 🧠 EŞZAMANLI GÜNCELLEME (Local + Global)
   const addWorkout = (mins) => {
-    setCurrentMins(prev => Math.min(prev + mins, goal + 60)); // Hedefi aşabilir
+    // 1. Yeni dakikayı hesapla (Tasarımı bozmamak için makul bir sınır koy)
+    const newMins = Math.min(currentMins + mins, goal + 60); 
+    
+    // 2. Bu sayfanın görseli için yerel state'i güncelle
+    setCurrentMins(newMins);
+    
+    // 3. Ana ekran (Home Screen) için Solar Plexus (ID: 3) yüzdesini güncelle
+    const newProgress = Math.min(Math.floor((newMins / goal) * 100), 100);
+    updateChakraProgress(3, newProgress);
   };
 
   // Kök Çakra Stilindeki Milimetrik Arc (Yay) Hesaplamaları
@@ -114,15 +135,25 @@ export default function SolarPlexusDetail() {
       
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         
-         <View style={styles.header}>
-                                 <View style={styles.textGlowContainer}>
-                                   <Text style={[styles.headerTitle, styles.textGlow]}>SOLAR PLEKSUS ÇAKRA</Text>
-                                   <Text style={styles.headerTitle}>SOLAR PLEKSUS ÇAKRA</Text>
-                                 </View>
-                                 <View style={styles.headerGlowLine} />
-                               </View>
-       
+        {/* HEADER */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()} 
+            activeOpacity={0.7}
+          >
+            <Svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={COLORS.textGray} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M19 12H5M12 19l-7-7 7-7" />
+            </Svg>
+          </TouchableOpacity>
 
+          <View style={styles.textGlowContainer}>
+            <Text style={[styles.headerTitle, styles.textGlow]}>SOLAR PLEKSUS ÇAKRA</Text>
+            <Text style={styles.headerTitle}>SOLAR PLEKSUS ÇAKRA</Text>
+          </View>
+          <View style={styles.headerGlowLine} />
+        </View>
+       
         {/* --- HERO SECTION: ENERJİ ARK TASARIMI --- */}
         <View style={styles.hero}>
           <Svg width={size} height={size}>
@@ -276,7 +307,6 @@ export default function SolarPlexusDetail() {
   );
 }
 
-// --- STİLLER ---
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
@@ -287,11 +317,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 60,
   },
-   header: { alignItems: 'center', marginTop: 15, marginBottom: 30 },
+  header: { alignItems: 'center', marginTop: 15, marginBottom: 30 },
+  backButton: { position: 'absolute', left: 0, width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: COLORS.surfaceBorder, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   textGlowContainer: { alignItems: 'center' },
   headerTitle: { color: COLORS.textWhite, fontSize: 14, fontWeight: '600', letterSpacing: 6 },
-  textGlow: { position: 'absolute', color: COLORS.primaryGreen, opacity: 0.6, textShadowColor: COLORS.primaryGreen, textShadowRadius: 15 },
-  headerGlowLine: { marginTop: 12, width: 80, height: 2, backgroundColor: COLORS.primaryGreen },
+  textGlow: { position: 'absolute', color: COLORS.primaryYellow, opacity: 0.6, textShadowColor: COLORS.primaryYellow, textShadowRadius: 15 },
+  headerGlowLine: { marginTop: 12, width: 80, height: 2, backgroundColor: COLORS.primaryYellow },
   
   hero: { 
     alignItems: 'center', 

@@ -1,178 +1,152 @@
-import React, { useState } from 'react';
+import React, { useContext } from 'react'; 
 import { 
   View, 
   Text, 
   StyleSheet, 
-  ScrollView,
+  ScrollView, 
   TouchableOpacity, 
-  SafeAreaView,
-  StatusBar
+  SafeAreaView, 
+  StatusBar, 
+  Platform
 } from 'react-native';
-// Yönlendirmenin kesin çalışması için useNavigation eklendi
 import { useNavigation } from '@react-navigation/native'; 
+import Svg, { Path, Circle, Defs, ClipPath, G } from 'react-native-svg';
+import { ChakraContext } from './ChakraContext'; 
 
 const COLORS = {
-  background: '#070714', 
-  surface: '#121226',    
-  surfaceHighlight: '#1A1A36', 
-  textPrimary: '#F8FAFC',
-  textSecondary: '#8888A0',
-  accent: '#A855F7',     
-  border: '#2A2A40',
-  cardBg: '#1E1B4B', 
+  bgDark: '#01060A', surface: '#071018', textWhite: '#F8FAFC',    
+  textGray: '#8A9BA8', textDarkGray: '#2D3F50', border: 'rgba(255, 255, 255, 0.06)', cardBg: '#050B14', 
 };
 
-// Senin belirlediğin saf çakra renkleri
-const initialChakras = [
-  { id: 1, name: 'Kök', color: '#FF0000', progress: 0 },
-  { id: 2, name: 'Sakral', color: '#FFA500', progress: 0 },
-  { id: 3, name: 'Solar Plexus', color: '#FFFF00', progress: 0 },
-  { id: 4, name: 'Kalp', color: '#00C82B', progress: 0 },
-  { id: 5, name: 'Boğaz', color: '#00BFFF', progress: 0 },
-  { id: 6, name: 'Üçüncü Göz', color: '#7202C2', progress: 0 },
-  { id: 7, name: 'Tepe', color: '#CF03CF', progress: 0 },
-];
-
 export default function HomeScreen() {
-  const [chakras, setChakras] = useState(initialChakras);
-  // Navigation objesi hook ile garantilendi
   const navigation = useNavigation(); 
+  
+  const { chakras } = useContext(ChakraContext);
 
   const totalProgress = chakras.reduce((sum, chakra) => sum + chakra.progress, 0);
   const overallAura = Math.round(totalProgress / chakras.length);
 
-  // Çakralara tıklandığında yapılacak yönlendirme
   const handleChakraNavigate = (chakra) => {
-    if (chakra.id === 1) {
-      // 1 ID'li (Kırmızı) Kök çakraya basılınca doğrudan özel detay sayfasına git
-      navigation.navigate('RootChakraDetail');
-    } 
-    else if (chakra.id === 2) {
-      // 2 ID'li (Turuncu) Sakral çakraya basılınca doğrudan özel detay sayfasına git
-      navigation.navigate('SacralChakraDetail');
-    } 
-     else if (chakra.id === 3) {
-      // 3 ID'li (Sarı) Solar Plexus çakraya basılınca doğrudan özel detay sayfasına git
-      navigation.navigate('SolarPlexusDetail');
-    } 
-     else if (chakra.id === 4) {
-      // 4 ID'li (Yeşil) Kalp çakraya basılınca doğrudan özel detay sayfasına git
-      navigation.navigate('HeartChakraDetail');
-    } else if (chakra.id === 5) {
-      // 5 ID'li (Mavi) Boğaz çakraya basılınca doğrudan özel detay sayfasına git
-      navigation.navigate('ThroatChakraDetail');
-    }else {
-      // Diğerleri şimdilik genel bir sayfaya gitsin
-      navigation.navigate('ChakraDetail', { 
-        chakraId: chakra.id, 
-        chakraName: chakra.name,
-        chakraColor: chakra.color 
-      });
-    }
-  };
-
-  // Görev butonuna basınca DailyMission sayfasına yönlendirme
-  const handleDailyTaskNavigate = () => {
-    navigation.navigate('DailyMission');
+    if (chakra.id === 1) navigation.navigate('RootChakraDetail');
+    else if (chakra.id === 2) navigation.navigate('SacralChakraDetail');
+    else if (chakra.id === 3) navigation.navigate('SolarPlexusDetail');
+    else if (chakra.id === 4) navigation.navigate('HeartChakraDetail');
+    else if (chakra.id === 5) navigation.navigate('ThroatChakraDetail');
+    else if (chakra.id === 6) navigation.navigate('ThirdEyeChakraDetail');
+    else if (chakra.id === 7) navigation.navigate('CrownChakraDetail');
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.bgDark} />
       
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={styles.mainContainer}
-        bounces={false}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.mainContainer}>
         
-        {/* ÜST BLOK: HEADER & ENERJİ AKIŞI */}
+        {/* HEADER */}
         <View style={styles.topGroup}>
-          
           <View style={styles.header}>
             <View>
               <Text style={styles.greeting}>Merhaba,</Text>
               <Text style={styles.name}>Sinem</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.taskBtn} 
-              activeOpacity={0.7}
-              onPress={handleDailyTaskNavigate}
-            >
-              <Text style={styles.taskBtnText}>Görev</Text>
-            </TouchableOpacity>
+            <View style={styles.headerRight}>
+              <View style={styles.streakBadge}><Text style={styles.streakText}>🔥 3</Text></View>
+              <TouchableOpacity style={styles.taskBtn} activeOpacity={0.7} onPress={() => navigation.navigate('DailyMission')}>
+                <Svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={COLORS.textWhite} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                  <Path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </Svg>
+                <Text style={styles.taskBtnText}>Görev</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
+          {/* SIVI DOLUMLU ÇAKRALAR */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Enerji Akışı</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={styles.progressScroll}
-            >
-              {chakras.map((chakra) => (
-                <TouchableOpacity 
-                  key={chakra.id} 
-                  style={styles.chakraItem}
-                  activeOpacity={0.7}
-                  onPress={() => handleChakraNavigate(chakra)}
-                >
-                  <View style={[styles.progressRing, { borderColor: chakra.color }]}>
-                    <View style={[styles.innerCircle, { 
-                        backgroundColor: chakra.progress === 100 ? chakra.color : COLORS.surfaceHighlight 
-                      }]}>
-                      <Text style={[styles.progressText, { 
-                          color: chakra.progress === 100 ? '#FFF' : chakra.color 
-                        }]}>
-                        %{chakra.progress}
-                      </Text>
+            <Text style={styles.sectionTitle}>ENERJİ AKIŞI</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.progressScroll}>
+              {chakras.map((chakra) => {
+                
+                // Sıvı Dolum Y Ekseni Hesaplaması
+                const size = 62; 
+                const waterY = size - (size * (chakra.progress / 100));
+
+                return (
+                  <TouchableOpacity key={chakra.id} style={styles.chakraItem} activeOpacity={0.7} onPress={() => handleChakraNavigate(chakra)}>
+                    <View style={[styles.progressRing, { borderColor: `${chakra.color}40`, shadowColor: chakra.color }]}>
+                      
+                      {/* Sıvı Maskeleme Alanı */}
+                      <View style={styles.innerCircle}>
+                        
+                        {/* SVG SIVI ÇİZİMİ (Altta kalacak) */}
+                        <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ position: 'absolute' }}>
+                          <Defs>
+                            <ClipPath id={`mask-${chakra.id}`}>
+                              <Circle cx={size/2} cy={size/2} r={size/2} />
+                            </ClipPath>
+                          </Defs>
+                          
+                          <Circle cx={size/2} cy={size/2} r={size/2} fill={COLORS.surface} />
+                          
+                          {chakra.progress > 0 && (
+                            <G clipPath={`url(#mask-${chakra.id})`}>
+                              <Path 
+                                d={`M 0 ${waterY} Q ${size/4} ${waterY - 4} ${size/2} ${waterY} T ${size} ${waterY} L ${size} ${size} L 0 ${size} Z`} 
+                                fill={chakra.color} 
+                                opacity={0.85} 
+                              />
+                            </G>
+                          )}
+                        </Svg>
+                        
+                        {/* YÜZDE YAZISI (Z-index ile en üstte, tam ortada) */}
+                        <View style={styles.percentageOverlay}>
+                          <Text style={[
+                            styles.progressText, 
+                            { 
+                              // Sıvı %45'i geçerse yazı beyaz olur (Kontrast için)
+                              color: chakra.progress > 45 ? '#FFFFFF' : chakra.color,
+                            }
+                          ]}>
+                            %{chakra.progress}
+                          </Text>
+                        </View>
+                        
+                      </View>
+
                     </View>
-                  </View>
-                  <Text style={styles.chakraName}>{chakra.name}</Text>
-                </TouchableOpacity>
-              ))}
+                    <Text style={styles.chakraName}>{chakra.name}</Text>
+                  </TouchableOpacity>
+                )
+              })}
             </ScrollView>
           </View>
         </View>
 
-        {/* ORTA BLOK: AURA FREKANSI */}
+        {/* AURA FREKANSI */}
         <View style={styles.middleGroup}>
+          <Text style={[styles.sectionTitle, { paddingHorizontal: 24 }]}>AURA DURUMU</Text>
           <View style={styles.frequencyContainer}>
             <View style={styles.frequencyHeader}>
-              <Text style={styles.frequencyTitle}>Aura Frekansı</Text>
+              <Text style={styles.frequencyTitle}>Genel Frekans</Text>
               <Text style={styles.frequencyPercentage}>%{overallAura}</Text>
             </View>
-            
             <View style={styles.multiColorBarContainer}>
               {chakras.map((chakra, index) => (
-                <View 
-                  key={`bar-${chakra.id}`} 
-                  style={[
-                    styles.colorSegment, 
-                    { 
-                      backgroundColor: chakra.color,
-                      opacity: chakra.progress > 0 ? 1 : 0.15,
-                      borderTopLeftRadius: index === 0 ? 8 : 0,
-                      borderBottomLeftRadius: index === 0 ? 8 : 0,
-                      borderTopRightRadius: index === chakras.length - 1 ? 8 : 0,
-                      borderBottomRightRadius: index === chakras.length - 1 ? 8 : 0,
-                    }
-                  ]} 
-                />
+                <View key={`bar-${chakra.id}`} style={[styles.colorSegment, { backgroundColor: chakra.color, opacity: chakra.progress > 0 ? 1 : 0.2, borderTopLeftRadius: index === 0 ? 8 : 0, borderBottomLeftRadius: index === 0 ? 8 : 0, borderTopRightRadius: index === chakras.length - 1 ? 8 : 0, borderBottomRightRadius: index === chakras.length - 1 ? 8 : 0 }]} />
               ))}
             </View>
           </View>
         </View>
 
-        {/* ALT BLOK: GÜNÜN REHBERİ */}
+        {/* GÜNÜN REHBERİ */}
         <View style={styles.bottomGroup}>
-          <Text style={styles.sectionTitle}>Günün Rehberi</Text>
+          <Text style={[styles.sectionTitle, { paddingHorizontal: 24 }]}>GÜNÜN REHBERİ</Text>
           <View style={styles.dailyCard}>
+            <View style={styles.cardGlowLine} />
+            <View style={styles.energyTag}><Text style={styles.energyTagText}>🌕 DOLUNAY ENERJİSİ</Text></View>
             <View style={styles.cardContent}>
               <Text style={styles.quoteIcon}>"</Text>
-              <Text style={styles.affirmationText}>
-                İçimdeki potansiyel okyanuslar kadar derin. Karşıma çıkan her zorluğu bir basamak olarak görüyorum.
-              </Text>
+              <Text style={styles.affirmationText}>İçimdeki potansiyel okyanuslar kadar derin. Karşıma çıkan her zorluğu bir basamak olarak görüyorum.</Text>
               <Text style={styles.cardFooter}>~ 3. Göz Çakrası</Text>
             </View>
           </View>
@@ -184,179 +158,56 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { 
-    flex: 1, 
-    backgroundColor: COLORS.background 
-  },
-  mainContainer: {
-    paddingTop: 16,
-    paddingBottom: 40,
-  },
-  topGroup: {
-    marginBottom: 36,
-  },
-  middleGroup: {
-    marginBottom: 36,
-  },
-  bottomGroup: {
-    marginBottom: 10,
-  },
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingHorizontal: 24, 
-    marginBottom: 36, 
-  },
-  greeting: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  name: { 
-    fontSize: 24, 
-    fontWeight: '800', 
-    color: COLORS.textPrimary, 
-    letterSpacing: -0.5,
-  },
-  taskBtn: { 
-    backgroundColor: COLORS.surfaceHighlight, 
-    paddingVertical: 8, 
-    paddingHorizontal: 16, 
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  taskBtnText: { 
-    color: COLORS.textPrimary, 
-    fontSize: 12, 
-    fontWeight: '600' 
-  },
-  section: { 
-    width: '100%',
-  },
-  sectionTitle: { 
-    fontSize: 16, 
-    fontWeight: '600', 
-    color: COLORS.textSecondary, 
-    paddingHorizontal: 24, 
-    marginBottom: 16,
-    textTransform: 'uppercase', 
-    letterSpacing: 1,
-  },
-  progressScroll: {
-    paddingHorizontal: 16,
-  },
-  chakraItem: {
-    alignItems: 'center',
-    marginHorizontal: 12, 
-  },
-  progressRing: {
-    width: 76, 
-    height: 76, 
-    borderRadius: 38,
-    borderWidth: 2,
+  safeArea: { flex: 1, backgroundColor: COLORS.bgDark },
+  mainContainer: { paddingTop: 20, paddingBottom: 50 },
+  topGroup: { marginBottom: 35 }, middleGroup: { marginBottom: 35 }, bottomGroup: { marginBottom: 15 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 40 },
+  greeting: { fontSize: 13, color: COLORS.textGray, fontWeight: '400', letterSpacing: 1, marginBottom: 4 },
+  name: { fontSize: 26, fontWeight: '800', color: COLORS.textWhite, letterSpacing: 0.5 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  streakBadge: { backgroundColor: 'rgba(255, 165, 0, 0.1)', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255, 165, 0, 0.3)' },
+  streakText: { fontSize: 12, fontWeight: '700', color: '#FFA500', letterSpacing: 0.5 },
+  taskBtn: { flexDirection: 'row', backgroundColor: COLORS.surface, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 5, elevation: 4 },
+  taskBtnText: { color: COLORS.textWhite, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  sectionTitle: { fontSize: 10, fontWeight: '800', color: COLORS.textGray, paddingHorizontal: 24, marginBottom: 16, letterSpacing: 3, opacity: 0.7 },
+  progressScroll: { paddingHorizontal: 16, paddingTop: 15, paddingBottom: 25, overflow: 'visible' },
+  chakraItem: { alignItems: 'center', marginHorizontal: 10 },
+  progressRing: { width: 76, height: 76, borderRadius: 38, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', marginBottom: 12, backgroundColor: COLORS.bgDark, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.4, shadowRadius: 8 }, android: { elevation: 6 }}) },
+  
+  // Sıvı Efekti ve Yazı Kapsayıcısı
+  innerCircle: { 
+    width: 62, 
+    height: 62, 
+    borderRadius: 31, 
+    overflow: 'hidden', 
+    position: 'relative',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    backgroundColor: COLORS.surface,
+    alignItems: 'center'
   },
-  innerCircle: {
-    width: 64, 
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressText: {
-    fontSize: 14, 
-    fontWeight: '700', 
-  },
-  chakraName: {
-    fontSize: 13,
-    color: COLORS.textPrimary,
-    fontWeight: '500',
-  },
-  frequencyContainer: { 
-    marginHorizontal: 24, 
-    backgroundColor: COLORS.surface, 
-    padding: 24, 
-    borderRadius: 24, 
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  frequencyHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-end', 
-    marginBottom: 16 
-  },
-  frequencyTitle: { 
-    fontSize: 16, 
-    fontWeight: '600', 
-    color: COLORS.textSecondary 
-  },
-  frequencyPercentage: { 
-    fontSize: 28, 
-    fontWeight: '800', 
-    color: COLORS.textPrimary, 
-    lineHeight: 32 
-  },
-  multiColorBarContainer: {
-    flexDirection: 'row',
-    height: 12, 
+  percentageOverlay: { 
+    position: 'absolute', 
+    zIndex: 10, 
+    elevation: 10,
     width: '100%',
-    backgroundColor: COLORS.background,
-    borderRadius: 8,
-  },
-  colorSegment: {
-    flex: 1, 
     height: '100%',
-    marginHorizontal: 1, 
-  },
-  dailyCard: {
-    marginHorizontal: 24,
-    borderRadius: 24,
-    minHeight: 140, 
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    borderWidth: 1,
-    backgroundColor: COLORS.cardBg, 
-    borderColor: COLORS.accent,
-    shadowColor: COLORS.accent,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
+    alignItems: 'center'
   },
-  cardContent: {
-    width: '100%',
-  },
-  quoteIcon: {
-    fontSize: 42, 
-    color: COLORS.accent,
-    fontWeight: '900',
-    opacity: 0.4,
-    marginBottom: -20,
-    marginLeft: -4,
-  },
-  affirmationText: {
-    fontSize: 15, 
-    color: COLORS.textPrimary,
-    fontWeight: '400',
-    lineHeight: 24,
-    textAlign: 'center',
-    marginVertical: 14,
-    letterSpacing: 0.3,
-  },
-  cardFooter: {
-    fontSize: 12,
-    color: '#D8B4FE', 
-    fontWeight: '600',
-    textAlign: 'right',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  }
+  
+  progressText: { fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  chakraName: { fontSize: 11, color: COLORS.textWhite, fontWeight: '600', opacity: 0.9, letterSpacing: 0.5 },
+  frequencyContainer: { marginHorizontal: 24, backgroundColor: COLORS.surface, padding: 24, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
+  frequencyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 },
+  frequencyTitle: { fontSize: 14, fontWeight: '500', color: COLORS.textWhite, opacity: 0.9 },
+  frequencyPercentage: { fontSize: 32, fontWeight: '800', color: COLORS.textWhite, lineHeight: 36, letterSpacing: -1 },
+  multiColorBarContainer: { flexDirection: 'row', height: 10, width: '100%', backgroundColor: COLORS.bgDark, borderRadius: 8, overflow: 'hidden' },
+  colorSegment: { flex: 1, height: '100%', marginHorizontal: 1 },
+  dailyCard: { marginHorizontal: 24, borderRadius: 24, minHeight: 140, justifyContent: 'center', paddingTop: 30, paddingBottom: 24, paddingHorizontal: 24, borderWidth: 1, backgroundColor: COLORS.cardBg, borderColor: COLORS.border, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 8, position: 'relative', overflow: 'hidden' },
+  cardGlowLine: { position: 'absolute', top: 0, left: 24, right: 24, height: 2, backgroundColor: '#7202C2', opacity: 0.6, shadowColor: '#7202C2', shadowOpacity: 1, shadowRadius: 10 },
+  energyTag: { position: 'absolute', top: 16, left: 24, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  energyTagText: { color: COLORS.textGray, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  cardContent: { width: '100%', position: 'relative', marginTop: 10 },
+  quoteIcon: { position: 'absolute', top: -35, left: -10, fontSize: 60, color: '#7202C2', fontWeight: '900', opacity: 0.15 },
+  affirmationText: { fontSize: 15, color: COLORS.textWhite, fontWeight: '300', lineHeight: 26, marginVertical: 10, letterSpacing: 0.3, zIndex: 2 },
+  cardFooter: { fontSize: 10, color: '#7202C2', fontWeight: '700', textAlign: 'right', letterSpacing: 1, marginTop: 10 }
 });
